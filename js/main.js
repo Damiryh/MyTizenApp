@@ -83,9 +83,9 @@ Collector = {
 		return this.getCurrentSeason().episodes[this._currentEpisodePos];
 	},
 	
-	setCurrentVideo: pos => { this._currentVideoPos = pos; },
-	setCurrentSeason: pos => { this._currentVideoPos = pos; },
-	setCurrentEpisode: pos => { this._currentEpisodePos = pos; },
+	setCurrentVideo: function(pos) { this._currentVideoPos = pos; },
+	setCurrentSeason: function(pos) { this._currentSeasonPos = pos; },
+	setCurrentEpisode: function(pos) { this._currentEpisodePos = pos; },
 	
 	
 	nextEpisode: function() {
@@ -148,6 +148,7 @@ function init_tvmw_portal() {
 		return Collector.loadVideos();
 	})
 	.then(() => {
+		Collector.setCurrentVideo(1);
 		return Collector.loadVideo(Collector.getCurrentVideo().id);
 	})
 	.then(() => {

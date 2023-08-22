@@ -85,7 +85,7 @@
 	opacity: 0;
 }
 
-.episode-lst-menu-bg {
+.episode-list-bg {
 	position: fixed;
 	top: 0px;
 	bottom: 0px;
@@ -93,4 +93,25 @@
 	right: 0px;	
 	background: linear-gradient(0deg, rgba(9,14,42,1) 0%, rgba(9,14,42,0.46662) 67%, rgba(9,14,42,0.67390) 100%);
 	z-index: 200;
+}
+
+
+
+.episode-item {
+	display: inline-block;
+}
+
+.episode-item > div {
+	position: relative;
+	border: 1px solid white;
+}
+
+.episode-item img {
+	width: 30%;
+}
+
+.episode-item.selected > div {
+	position: relative;
+	height: 120%;
+	top: -20%;
 }

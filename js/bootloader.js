@@ -1,3 +1,5 @@
+/*
+
 function sendMessage(level, msg) {
 	var xhr = new XMLHttpRequest();
 	var url = new URL('http://192.168.88.250/logging/');
@@ -17,6 +19,8 @@ console.warn = function(message) {
 console.error = function(message) {
 	sendMessage("err", message);
 }
+
+*/
 
 
 function loadCSS(path) {
@@ -75,7 +79,10 @@ function boot() {
 		return Promise.all([
 			loadHTML('/templates/progressBar.html', 'progressBar'),
 			loadHTML('/templates/infoBar.html', 'infoBar'),
-			loadHTML('/templates/episodeListMenu.html', 'episodeListMenu')
+			loadHTML('/templates/episodeListMenu.html', 'episodeListMenu'),
+			loadHTML('/templates/episodeMenu.html', 'episodeMenu'),
+			loadHTML('/templates/episodeItem.html', 'episodeItem'),
+			loadHTML('/templates/player.html', 'player')
 		])
 		.then( templates => {
 			for (var template of templates) {

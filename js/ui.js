@@ -39,6 +39,13 @@ function createUIElementFromHTML(template_name) {
 
 //======================================================================
 
+function Player() {
+	this.__proto__ = UIElement;
+	
+	this._root = createUIElement('player');
+};
+
+
 
 function ProgressBar() {
 	this.__proto__ = UIElement;
@@ -79,7 +86,6 @@ function IdleListener(timeout) {
 	this._onkeydown = function(event) {
 		if (this._t) this.clearTimeout(this._t);
 		this._t = this.setTimeout(function() { this._onIdle(); }, this._timeout);
-		alert(this + "   " + this._timeout);
 	};
 	
 	this._onIdle = function() {
@@ -128,11 +134,91 @@ function InfoBar() {
 
 //======================================================================
 
-function EpisodeListMenu(items) {
+function EpisodeItem(episode) {
+	this.__proto__ = UIElement;
+	
+	this._root = createUIElementFromHTML('episodeItem');
+	this._previewImage = this._root.getElementsByClassName('episode-preview')[0];
+	this._nameLabel = this._root.getElementsByClassName('episode-name')[0];
+	
+	this.data = episode;
+	
+	this._previewImage.src = this.data.preview_url ||
+		"http://192.168.88.250/static/defaultPreview.png";
+	this._nameLabel.textContent = this.data.name;
+	
+	this.select = function() {
+		this._root.classList.add('selected');
+	};
+	
+	this.unselect = function() {
+		this._root.classList.remove('selected');
+	};
+}
+
+function EpisodeMenu() {
+	this.__proto__ = UIElement;
+	
+	this.items = [];
+	this._selectPos = 0;
+	this._itemsOnScreenCount = 3;
+	
+	this._root = createUIElementFromHTML('episodeMenu');
+	this._itemsPlace = this._root.getElementsByClassName('items-place')[0];
+	
+	this.setItems = function(episodes) {
+		this.items = [];
+		for (var episode of episodes) {
+			var item = new EpisodeItem(episode);
+			this.items.push(item);
+		}
+		
+		this._rebuild();
+	};
+	
+	this.next = function() {
+		if (this._selectPos < this.items.length) {
+			this.getSelectedItem().unselect();
+			this._selectPos++;
+			this.getSelectedItem().select();
+		}
+	};
+	
+	this.prev = function() {
+		if (this._selectPos >= 0) {
+			this._selectPos--;
+		}
+	}
+	
+	this.getSelectedItem = function() {
+		return this.items[this._selectPos];
+	}
+
+	this._rebuild = function() {
+		this._itemsPlace.textContent = "";
+		
+		var start = Math.max(0, this._selectPos - this._itemsOnScreenCount/2);
+		var end = Math.min(this.items.length, start + this._itemsOnScreenCount);
+		start = Math.max(0, end - this._itemsOnScreenCount);
+		
+		for (i = start; i < end; i++) {
+			if (i == this._selectPos) this.items[i].select();
+			this.items[i].bind(this._itemsPlace);
+		}
+	}
+}
+
+//======================================================================
+
+function EpisodeList(items) {
 	this.items = items;
 	this.__proto__ = UIElement;
 	
 	this._root = createUIElementFromHTML('episodeListMenu');
+	
+	this._episodeMenu = new EpisodeMenu();
+	this._episodeMenu.bind(this._root);
+	this._episodeMenu.setItems(Collector.getCurrentSeason().episodes);
 }
 
 
@@ -186,7 +272,7 @@ window.addEventListener('keydown', event => {
 	}
 	
 	if (event.keyCode == KeyCode.UP) {
-		UI.episodeListMenu.show();
+		UI.episodeList.show();
 	}
 	
 	if (event.keyCode == KeyCode.LEFT) {
@@ -199,6 +285,10 @@ window.addEventListener('keydown', event => {
 		webapis.avplay.jumpForward(10000);
 	}
 });
+
+
+
+
 
 window.addEventListener('portalLoad', () => {
 	UI.idleListener = new IdleListener(5000);
@@ -217,7 +307,6 @@ window.addEventListener('portalLoad', () => {
 	UI.infoBar.bind(document.body);
 	updateInfobar();
 	
-	UI.episodeListMenu =
-		new EpisodeListMenu(Collector.getCurrentSeason().episodes);
-	UI.episodeListMenu.bind(document.body);
+	UI.episodeList = new EpisodeList();
+	UI.episodeList.bind(document.body);
 });
