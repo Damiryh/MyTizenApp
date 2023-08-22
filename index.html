@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+		<title>DmrPortal</title>
+		<style>
+			body { background-color: black; }
+		</style>
+		<script>
+			PORTAL_URL = 'http://192.168.88.250';
+			
+			// Загружаем скрипты для запуска приложения
+			function loadJS(path) {
+				return new Promise((resolve, reject) => {
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', new URL(PORTAL_URL + path));
+					xhr.send();
+					console.log('Loading "' + path + '"...')
+					
+					xhr.onload = function() {
+						if (xhr.status != 200) { reject(); return; }
+						
+						var s = document.createElement('script');
+						s.appendChild(document.createTextNode(xhr.response));
+						s.type = 'text/javascript';
+						s.language = 'javascript';
+						
+						var head = document.getElementsByTagName('head')[0];
+						head.appendChild(s);
+						
+						console.log('Loaded!');
+						resolve();
+					};
+				});
+			}
+			
+			loadJS('/js/bootloader.js')
+			.then(() => { boot(); });
+		</script>
+    </head>
+    
+    <body></body>
+</html>
