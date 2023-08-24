@@ -56,7 +56,7 @@ Collector = {
 	loadURI: function(video_id, episode_id) {
 		return atvmw('/video/url/', {
 			'vid': video_id,
-			'fvid': episode_id,
+			'fvid': episode_id, // assets
 			//'device': 'android_stb',
 			'redirect': 0
 		})
@@ -98,10 +98,13 @@ Collector = {
 		this._currentEpisodePos += 1;
 		
 		// Переключаемся на новый сезон (если старый закончился)
-		if (this._currentEpisodePos >= this.getCurrentSeason().episodes.length) {
+		if (this._currentEpisodePos < this.getCurrentSeason().episodes.length) {
+			this._currentEpisodePos += 1;
+		}
+		else {
+			this._currentEpisodePos = 0;
 			this._currentSeasonPos += 1;
-			
-			// Закольцевали сезоны
+
 			if (this._currentSeasonPos >= this.getCurrentVideo().seasons.length) {
 				this._currentSeasonPos = 0;
 			}

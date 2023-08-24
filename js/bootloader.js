@@ -82,6 +82,8 @@ function boot() {
 			loadHTML('/templates/episodeListMenu.html', 'episodeListMenu'),
 			loadHTML('/templates/episodeMenu.html', 'episodeMenu'),
 			loadHTML('/templates/episodeItem.html', 'episodeItem'),
+			loadHTML('/templates/seasonMenu.html', 'seasonMenu'),
+			loadHTML('/templates/seasonItem.html', 'seasonItem'),
 			loadHTML('/templates/player.html', 'player')
 		])
 		.then( templates => {
@@ -103,6 +105,11 @@ function reload() {
 	xhr.send();
 	
 	xhr.onload = function() {
+		webapis.avplay.stop();
+		webapis.avplay.close();
+		Collector = undefined;
+		UI = undefined;
+		
 		document.open();
 		document.clear();
 		document.write(xhr.response);

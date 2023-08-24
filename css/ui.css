@@ -24,8 +24,6 @@
 	right: 0px;	
 	background: linear-gradient(0deg, rgba(9,14,42,1) 0%, rgba(9,14,42,0.26662) 67%, rgba(9,14,42,0.47390) 100%);
 	z-index: 150;
-	
-	transition: opacity 2s linear;
 }
 
 .progressbar-bg {
@@ -38,6 +36,7 @@
 
 .progressbar {
 	position: relative;
+	transition: width 500ms linear;
 }
 
 .player-pb-bg {
