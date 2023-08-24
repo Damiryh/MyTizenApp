@@ -57,6 +57,7 @@ Collector = {
 		return atvmw('/video/url/', {
 			'vid': video_id,
 			'fvid': episode_id,
+			//'device': 'android_stb',
 			'redirect': 0
 		})
 		.then(response => {
@@ -72,7 +73,12 @@ Collector = {
 	},
 	
 	getCurrentVideo: function() {
-		return this._videos[this._currentVideoPos];
+		if (this._currentVideo) {
+			return this._currentVideo;
+		}
+		else {
+			return this._videos[this._currentVideoPos];
+		}
 	},
 	
 	getCurrentSeason: function() {
@@ -148,8 +154,9 @@ function init_tvmw_portal() {
 		return Collector.loadVideos();
 	})
 	.then(() => {
-		Collector.setCurrentVideo(1);
+		Collector.setCurrentVideo(0);
 		return Collector.loadVideo(Collector.getCurrentVideo().id);
+		//return Collector.loadVideo(319835);
 	})
 	.then(() => {
 		return Collector.loadCurrentURI();

@@ -1,12 +1,34 @@
-UI = {};
+UI = {
+	focusedElement: window
+};
+
+const KeyCode = {
+	LEFT:  37,
+	UP:    38,
+	RIGHT: 39,
+	DOWN:  40,
+	OK:    13,
+	BACK:  10009
+};
 
 const UIElement = {
-	bind: function(owner) {
+	bindElement: function(owner) {
 		this._owner = owner;
 		this._owner.appendChild(this._root);
+		
+		window.addEventListener("keydown", this._onkeydownHandler.bind(this));
+		window.addEventListener("keyup", this._onkeyupHandler.bind(this));
 	},
 	
-	unbind: function() {
+	_onkeydownHandler: function(event) {
+		if (UI.focusedElement == this._root) this.onkeydown(event);
+	},
+	
+	_onkeyupHandler: function(event) {
+		if (UI.focusedElement == this._root) this.onkeyup(event);
+	},
+	
+	unbindElement: function() {
 		this._owner.removeChild(this._root);
 	},
 	
@@ -17,6 +39,17 @@ const UIElement = {
 	hide: function() {
 		this._root.classList.add('hidden');
 	},
+	
+	focus: function() {
+		UI.focusedElement = this._root;
+	},
+	
+	unfocus: function() {
+		UI.focusedElement = window;
+	},
+	
+	onkeydown: function(event) {},
+	onkeyup: function(event) {}
 };
 
 //======================================================================
@@ -65,7 +98,7 @@ function ProgressBar() {
 	
 	this.getCurrentTime = function() {
 		return this._progress * this.duration;
-	}
+	};
 	
 	this.setCurrentTime = function(currentTime) {
 		this.currentTime = currentTime;
@@ -84,8 +117,11 @@ function IdleListener(timeout) {
 	this._t = 0;
 	
 	this._onkeydown = function(event) {
-		if (this._t) this.clearTimeout(this._t);
-		this._t = this.setTimeout(function() { this._onIdle(); }, this._timeout);
+		if (this._t) clearTimeout(this._t);
+		this._t = setTimeout(
+			this._onIdle.bind(this),
+			this._timeout
+		);
 	};
 	
 	this._onIdle = function() {
@@ -96,9 +132,7 @@ function IdleListener(timeout) {
 		this._subs.push(sub);
 	};
 	
-	this.init = function() {
-		window.addEventListener('keydown', this._onkeydown);
-	};
+	window.addEventListener('keypress', this._onkeydown.bind(this));
 }
 
 //======================================================================
@@ -109,7 +143,7 @@ function InfoBar() {
 	
 	this._root = createUIElementFromHTML('infoBar');
 	this._progressBar = new ProgressBar();
-	this._progressBar.bind(this._root);
+	this._progressBar.bindElement(this._root);
 	
 	this._seasonNameLabel =
 		this._root.getElementsByClassName("season-name")[0];
@@ -119,15 +153,15 @@ function InfoBar() {
 	
 	this.getProgressBar = function() {
 		return this._progressBar;
-	}
+	};
 	
 	this.setSeasonName = function(name) {
 		this._seasonNameLabel.textContent = name;
-	}
+	};
 	
 	this.setEpisodeName = function(name) {
 		this._episodeNameLabel.textContent = name;
-	}
+	};
 }
 
 
@@ -143,8 +177,8 @@ function EpisodeItem(episode) {
 	
 	this.data = episode;
 	
-	this._previewImage.src = this.data.preview_url ||
-		"http://192.168.88.250/static/defaultPreview.png";
+	this._previewImage.src = this.data.preview_url || "http://192.168.88.250/static/defaultPreview.png";
+	
 	this._nameLabel.textContent = this.data.name;
 	
 	this.select = function() {
@@ -170,6 +204,7 @@ function EpisodeMenu() {
 		this.items = [];
 		for (var episode of episodes) {
 			var item = new EpisodeItem(episode);
+			item._root.style.width = Math.floor(100/this._itemsOnScreenCount) + "%";
 			this.items.push(item);
 		}
 		
@@ -177,35 +212,41 @@ function EpisodeMenu() {
 	};
 	
 	this.next = function() {
-		if (this._selectPos < this.items.length) {
+		if (this._selectPos < this.items.length-1) {
 			this.getSelectedItem().unselect();
 			this._selectPos++;
 			this.getSelectedItem().select();
+			
+			this._rebuild();
 		}
 	};
 	
 	this.prev = function() {
-		if (this._selectPos >= 0) {
+		if (this._selectPos > 0) {
+			this.getSelectedItem().unselect();
 			this._selectPos--;
+			this.getSelectedItem().select();
+			
+			this._rebuild();
 		}
-	}
+	};
 	
 	this.getSelectedItem = function() {
 		return this.items[this._selectPos];
-	}
+	};
 
 	this._rebuild = function() {
 		this._itemsPlace.textContent = "";
 		
-		var start = Math.max(0, this._selectPos - this._itemsOnScreenCount/2);
+		var start = Math.ceil(Math.max(0, this._selectPos - this._itemsOnScreenCount/2));
 		var end = Math.min(this.items.length, start + this._itemsOnScreenCount);
 		start = Math.max(0, end - this._itemsOnScreenCount);
 		
 		for (i = start; i < end; i++) {
 			if (i == this._selectPos) this.items[i].select();
-			this.items[i].bind(this._itemsPlace);
+			this.items[i].bindElement(this._itemsPlace);
 		}
-	}
+	};
 }
 
 //======================================================================
@@ -217,7 +258,7 @@ function EpisodeList(items) {
 	this._root = createUIElementFromHTML('episodeListMenu');
 	
 	this._episodeMenu = new EpisodeMenu();
-	this._episodeMenu.bind(this._root);
+	this._episodeMenu.bindElement(this._root);
 	this._episodeMenu.setItems(Collector.getCurrentSeason().episodes);
 }
 
@@ -257,56 +298,47 @@ function avplay_video(src) {
 	return player;
 }
 
-const KeyCode = {
-	LEFT:  37,
-	UP:    38,
-	RIGHT: 39,
-	DOWN:  40,
-	OK:    13,
-	BACK:  10009
-};
-
 window.addEventListener('keydown', event => {
-	if (event.keyCode == KeyCode.BACK) {
-		UI.infoBar.show();
-	}
-	
-	if (event.keyCode == KeyCode.UP) {
-		UI.episodeList.show();
-	}
-	
-	if (event.keyCode == KeyCode.LEFT) {
-		UI.infoBar.show();
-		webapis.avplay.jumpBackward(10000);
-	}
-	
-	if (event.keyCode == KeyCode.RIGHT) {
-		UI.infoBar.show();
-		webapis.avplay.jumpForward(10000);
+	if (UI.focusedElement == window) {
+		if (event.keyCode == KeyCode.BACK) {
+			UI.infoBar.show();
+			UI.infoBar.focus();
+		}
+		
+		if (event.keyCode == KeyCode.UP) {
+			UI.episodeList.show();
+			UI.episodeList.focus();
+		}
 	}
 });
 
 
 
 
-
 window.addEventListener('portalLoad', () => {
-	UI.idleListener = new IdleListener(5000);
-	UI.idleListener.init();
-	
-	UI.idleListener.attach(() => {
-		UI.infoBar.hide();
-	});
-	
 	UI.player = avplay_video();
 	webapis.avplay.open(Collector.currentEpisodeURI);
 	webapis.avplay.prepare();
 	webapis.avplay.play();
 	
 	UI.infoBar = new InfoBar();
-	UI.infoBar.bind(document.body);
+	UI.infoBar.onkeydown = function(event) {};
+	
+	UI.infoBar.bindElement(document.body);
 	updateInfobar();
 	
 	UI.episodeList = new EpisodeList();
-	UI.episodeList.bind(document.body);
+	UI.episodeList.bindElement(document.body);
+	UI.episodeList.onkeydown = function(event) {
+		if (event.keyCode == KeyCode.LEFT) this._episodeMenu.prev();
+		if (event.keyCode == KeyCode.RIGHT) this._episodeMenu.next();
+		if (event.keyCode == KeyCode.OK) {
+			this._episodeMenu.getSelectedItem().data;
+		}
+	};
+	
+	UI.idleListener = new IdleListener(5000);
+	UI.idleListener.attach(function() {
+		UI.infoBar.hide();
+	});
 });
