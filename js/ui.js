@@ -121,13 +121,18 @@ function ProgressBar() {
 
 //======================================================================
 
-// Задержка - в секундах
 function IdleListener(timeout) {
 	this._timeout = timeout;
-	this._subs = new Array();
-	this._t = 0;
+	this._subs = [];
+	this._keyState = false;
 	
 	this._onkeydown = function(event) {
+		if (this._t) clearTimeout(this._t);
+		this._t = undefined;
+	};
+
+	this._onkeyup = function(event) {
+		alert('teadad');
 		if (this._t) clearTimeout(this._t);
 		this._t = setTimeout(
 			this._onIdle.bind(this),
@@ -143,7 +148,8 @@ function IdleListener(timeout) {
 		this._subs.push(sub);
 	};
 	
-	window.addEventListener('keypress', this._onkeydown.bind(this));
+	window.addEventListener('keydown', this._onkeydown.bind(this));
+	window.addEventListener('keyup', this._onkeyup.bind(this));
 }
 
 //======================================================================
@@ -209,7 +215,7 @@ const Menu = {
 		this._firstItemPos = 0;
 		this._lastItemPos = Math.min(
 			this._items.length - 1,
-			this._itemsOnScreenCount - 1,
+			this._itemsOnScreenCount - 1
 		);
 
 		for (i = this._firstItemPos; i <= this._lastItemPos; i++) {
@@ -245,7 +251,6 @@ const Menu = {
 			this._selectPos -= 1;
 			this.getSelectedItem().select();
 			if (this._selectPos < Math.floor(this._items.length - this._itemsOnScreenCount/2)) this._shiftMenuLeft();
-			console.log(this._selectPos + " " + this._items.length  + " " + this._itemsOnScreenCount/2);
 		}
 	},
 
@@ -340,59 +345,64 @@ function updateInfobar() {
 
 //======================================================================
 
-function HTML5Player() {
+function AVPlayer() {
 	this.__proto__ = UIElement;
-
-	this._root = document.createElement('video');
-	this._root.id = 'avplayer';
 	
-	this._source = document.createElement('source');
-	this._root.appendChild(this._source);
-
-	this._duration = 0;
+	this.avplay = webapis.avplay;
+	this._root = document.createElement('object');
+	this._root.type = 'application/player';
+	this._root.id = 'player';
+	
+	this._playing = false;
 	this._currentTime = 0;
 	this._currentMedia = "";
-
+	
 	this.oncurrenttimechange = function(currentTime) {};
+	this.onstreamcompleted = function() {};
 	this.ondurationchange = function() {};
-
-	this._ontimeupdate = function(event) {
-		this._currentTime = this._root.currentTime * 1000;
-		this.oncurrenttimechange(this._currentTime);
+	
+	this._listener = {
+		oncurrentplaytime: currentTime => {
+			this._currentTime = currentTime;
+			this.oncurrenttimechange(this._currentTime);
+		},
+		
+		onstreamcompleted: () => {
+			this.onstreamcompleted();
+		},
 	};
-	this._root.addEventListener('timechange', this._ontimeupdate.bind(this));
-	this._root.addEventListener('durationchange', () => {
-		this._duration = this._root.duration * 1000;
-		this.ondurationchange();
-	});
-
+	
+	this.avplay.setListener(this._listener);
+	
 	this.open = function(uri) {
 		if (uri != this._currentMedia) {
-			this._source.setAttribute('src', uri);
-			this._source.setAttribute('type', 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+			this.avplay.stop();
+			this.avplay.close();
+			this.avplay.open(uri);
+			this.avplay.prepare();
+			this._duration = this.avplay.getDuration();
 			this._currentMedia = uri;
+
+			this.ondurationchange();
 		}
 	};
-
-	this.close = function() {
-		this._root.removeChild(this._source);
-	};
-
-	this.stop = function() {
-		this._root.pause();
-		this._playing = false;
-	}
-
+	
 	this.play = function() {
-		this._root.play();
+		this.avplay.play();
 		this._playing = true;
-	}
-
-	this.pause = function() {
-		this._root.pause();
+	};
+	
+	this.pause = function(uri) {
+		this.avplay.pause();
 		this._playing = false;
-	}
-
+	};
+	
+	this.stop = function(uri) {
+		this.avplay.stop();
+		this._playing = false;
+		this.avplay.prepare();
+	};
+	
 	this.toggle = function() {
 		if (this._playing) {
 			this.pause();
@@ -401,7 +411,7 @@ function HTML5Player() {
 			this.play();
 		}
 	}
-
+	
 	this.jumpForward = function(dt) {
 		if ((this._currentTime + dt) < this._duration) {
 			this._currentTime += dt;
@@ -425,115 +435,14 @@ function HTML5Player() {
 	}
 	
 	this.applyCurrentTime = function() {
-		this._root.currentTime = this._currentTime/1000;
+		//this._root = this._currentTime;
 	};
 }
-
-/*
-function AVPlayer() {
-	this.__proto__ = UIElement;
-	
-	try {
-		this.avplay = webapis.avplay;
-		this._root = document.createElement('object');
-		this._root.type = 'application/player';
-		this._root.id = 'player';
-		
-		this._playing = false;
-		this._currentTime = 0;
-		this._currentMedia = "";
-		
-		this.oncurrenttimechange = function(currentTime) {};
-		this.onstreamcompleted = function() {};
-		this.ondurationchange = function() {};
-		
-		this._listener = {
-			oncurrentplaytime: currentTime => {
-				this._currentTime = currentTime;
-				this.oncurrenttimechange(this._currentTime);
-			},
-			
-			onstreamcompleted: () => {
-				this.onstreamcompleted();
-			},
-		};
-		
-		this.avplay.setListener(this._listener);
-		
-		this.open = function(uri) {
-			if (uri != this._currentMedia) {
-				this.avplay.stop();
-				this.avplay.close();
-				this.avplay.open(uri);
-				this.avplay.prepare();
-				this._duration = this.avplay.getDuration();
-				this._currentMedia = uri;
-
-				this.ondurationchange();
-			}
-		};
-		
-		this.play = function() {
-			this.avplay.play();
-			this._playing = true;
-		};
-		
-		this.pause = function(uri) {
-			this.avplay.pause();
-			this._playing = false;
-		};
-		
-		this.stop = function(uri) {
-			this.avplay.stop();
-			this._playing = false;
-			this.avplay.prepare();
-		};
-		
-		this.toggle = function() {
-			if (this._playing) {
-				this.pause();
-			}
-			else {
-				this.play();
-			}
-		}
-		
-		this.jumpForward = function(dt) {
-			if ((this._currentTime + dt) < this._duration) {
-				this._currentTime += dt;
-			}
-			else {
-				this._currentTime = this._duration;
-			}
-			
-			this.oncurrenttimechange(this._currentTime);
-		};
-		
-		this.jumpBackward = function(dt) {
-			if ((this._currentTime - dt) >= 0) {
-				this._currentTime -= dt;
-			}
-			else {
-				this._currentTime = 0;
-			}
-			
-			this.oncurrenttimechange(this._currentTime);
-		}
-		
-		this.applyCurrentTime = function() {
-			//this._root = this._currentTime;
-		};
-	}
-	catch (error) {
-		return new HTML5Player();
-	}
-}
-*/
 
 //======================================================================
 
 window.addEventListener('portalLoad', () => {
-	UI.player = new HTML5Player();
+	UI.player = new AVPlayer();
 	UI.player.bindElement(document.body);
 	UI.player.open(Collector.currentEpisodeURI);
 	UI.player.play();
@@ -619,10 +528,7 @@ window.addEventListener('portalLoad', () => {
 		}
 	};
 	
-	UI.idleListener = new IdleListener(5000);
-	UI.idleListener.attach(function() {
-		//UI.infoBar.hide();
-	});
+	
 	
 	window.addEventListener('keydown', event => {
 		if (UI.focusedElement == window) {
@@ -655,5 +561,11 @@ window.addEventListener('portalLoad', () => {
 			
 			event.stopImmediatePropagation();
 		}
+	});
+
+	UI.idleListener = new IdleListener(5000);
+	UI.idleListener.attach(function() {
+		UI.infoBar.hide();
+		UI.player.unfocus();
 	});
 });

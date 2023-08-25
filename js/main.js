@@ -53,10 +53,10 @@ Collector = {
 		});
 	},
 	
-	loadURI: function(video_id, episode_id) {
+	loadURI: function(video_id, episode_asset_id) {
 		return atvmw('/video/url/', {
 			'vid': video_id,
-			'fvid': episode_id, // assets
+			'fvid': episode_asset_id,
 			//'device': 'android_stb',
 			'redirect': 0
 		})
