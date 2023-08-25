@@ -121,7 +121,6 @@ function IdleListener(timeout) {
 	};
 
 	this._onkeyup = function(event) {
-		alert('teadad');
 		if (this._t) clearTimeout(this._t);
 		this._t = setTimeout(
 			this._onIdle.bind(this),
@@ -193,6 +192,7 @@ const Menu = {
 	setItems: function(items) {
 		this._items = items;
 		this._selectPos = 0;
+		this._itemsPlace.textContent = "";
 
 		for (i = 0; i < this._items.length; i++) {
 			this._items[i]._root.style.width = (100/this._itemsOnScreenCount) + "%";
@@ -252,6 +252,14 @@ const Menu = {
 		}
 	},
 
+	deactivate: function() {
+		this.getSelectedItem().unselect();
+	},
+
+	activate: function() {
+		this.getSelectedItem().select();
+	},
+
 	getSelectedItem: function() {
 		return this._items[this._selectPos];
 	}
@@ -265,7 +273,6 @@ function SeasonItem(season) {
 	
 	this._root = createUIElementFromHTML('seasonItem');
 	this._nameLabel = this._root;
-
 	this._nameLabel.textContent = season.name;
 }
 
@@ -310,11 +317,16 @@ function EpisodeMenu() {
 
 //======================================================================
 
+const EpisodeListState = {
+	EPISODE_MENU: 0,
+	SEASON_MENU: 1
+};
+
 function EpisodeList() {
 	this.__proto__ = UIElement;
 	
 	this._root = createUIElementFromHTML('episodeListMenu');
-	
+
 	this._seasonMenu = new SeasonMenu();
 	this._seasonMenu.bindElement(this._root);
 	this._seasonMenu.setItems(Collector.getCurrentVideo().seasons);
@@ -322,6 +334,10 @@ function EpisodeList() {
 	this._episodeMenu = new EpisodeMenu();
 	this._episodeMenu.bindElement(this._root);
 	this._episodeMenu.setItems(Collector.getCurrentSeason().episodes);
+
+	this._listState = EpisodeListState.EPISODE_MENU;
+	this._currentMenu = this._episodeMenu;	
+	this._seasonMenu.deactivate();
 }
 
 //======================================================================
@@ -356,9 +372,9 @@ function AVPlayer(avplay) {
 			this.oncurrenttimechange(this._currentTime);
 		},
 		
-		onstreamcompleted: () => {
+		onstreamcompleted: (() => {
 			this.onstreamcompleted();
-		},
+		}).bind(this),
 	};
 	
 	this.avplay.setListener(this._listener);
@@ -424,7 +440,7 @@ function AVPlayer(avplay) {
 	}
 	
 	this.applyCurrentTime = function() {
-		//this._root = this._currentTime;
+		this.avplay.seekTo(this._currentTime);
 	};
 }
 
@@ -486,11 +502,24 @@ window.addEventListener('portalLoad', () => {
 	
 	UI.player.ondurationchange = function() {
 		UI.infoBar.getProgressBar().setDuration(UI.player._duration);
-	}
+	};
 
 	UI.player.oncurrenttimechange = function(currentTime) {
 		UI.infoBar.getProgressBar().setCurrentTime(currentTime);
-	}
+	};
+
+	UI.player.onstreamcompleted = function() {
+		var isSeasonCompleted = Collector.nextEpisode();
+
+		if (isSeasonCompleted) {
+			UI.episodeList._episodeMenu.next();
+			UI.infoBar.setEpisodeName(Collector.getCurrentEpisode().name);
+			UI.infoBar.setSeasonName(Collector.getCurrentVideo().name);
+			UI.player.stop();
+			UI.player.open(Collector.currentEpisodeURI);
+			UI.player.play();
+		}
+	};
 	
 	UI.infoBar = new InfoBar();
 	UI.infoBar.bindElement(document.body);
@@ -500,20 +529,45 @@ window.addEventListener('portalLoad', () => {
 	UI.episodeList.bindElement(document.body);
 
 	UI.episodeList.onkeydown = function(event) {
-		if (event.keyCode == KeyCode.LEFT) this._episodeMenu.prev();
-		else if (event.keyCode == KeyCode.RIGHT) this._episodeMenu.next();
+		if (event.keyCode == KeyCode.LEFT) { this._currentMenu.prev(); }
+		else if (event.keyCode == KeyCode.RIGHT) { this._currentMenu.next(); }
 		else if (event.keyCode == KeyCode.OK) {
-			Collector.setCurrentEpisode(this._episodeMenu._selectPos);
-			Collector.loadCurrentURI().then(() => {
-				UI.player.open(Collector.currentEpisodeURI);
-				UI.infoBar.setEpisodeName(Collector.getCurrentEpisode().name);
-				UI.infoBar.setSeasonName(Collector.getCurrentVideo().name);
-				UI.player.play();
-			});
+			if (this._listState == EpisodeListState.EPISODE_MENU) {
+				Collector.setCurrentEpisode(this._episodeMenu._selectPos);
+				Collector.loadCurrentURI().then(() => {
+					UI.player.open(Collector.currentEpisodeURI);
+					UI.infoBar.setEpisodeName(Collector.getCurrentEpisode().name);
+					UI.infoBar.setSeasonName(Collector.getCurrentVideo().name);
+					UI.player.play();
+				});
+			}
+			else if (this._listState == EpisodeListState.SEASON_MENU) {
+				Collector.setCurrentSeason(this._seasonMenu._selectPos);
+				this._episodeMenu.setItems(Collector.getCurrentSeason().episodes);
+				this._episodeMenu.deactivate();
+			}
+
 		}
 		else if (event.keyCode == KeyCode.DOWN) {
-			this.unfocus();
-			this.hide();
+			if (this._listState == EpisodeListState.EPISODE_MENU) {
+				this.unfocus();
+				this.hide();
+			}
+			else if (this._listState == EpisodeListState.SEASON_MENU) {
+				this._currentMenu = this._episodeMenu;
+				this._listState = EpisodeListState.EPISODE_MENU;
+				this._episodeMenu.activate();
+				this._seasonMenu.deactivate();
+			}
+		}
+		else if (event.keyCode == KeyCode.UP) {
+			if (this._listState == EpisodeListState.EPISODE_MENU) {
+
+				this._currentMenu = this._seasonMenu;
+				this._listState = EpisodeListState.SEASON_MENU;
+				this._episodeMenu.deactivate();
+				this._seasonMenu.activate();
+			}
 		}
 	};
 	
@@ -554,7 +608,9 @@ window.addEventListener('portalLoad', () => {
 
 	UI.idleListener = new IdleListener(5000);
 	UI.idleListener.attach(function() {
-		UI.infoBar.hide();
-		UI.player.unfocus();
+		if (UI.focusedElement == UI.player._root) {
+			UI.infoBar.hide();
+			UI.player.unfocus();
+		}
 	});
 });

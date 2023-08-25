@@ -95,22 +95,14 @@ Collector = {
 	
 	
 	nextEpisode: function() {
-		this._currentEpisodePos += 1;
-		
-		// Переключаемся на новый сезон (если старый закончился)
 		if (this._currentEpisodePos < this.getCurrentSeason().episodes.length) {
 			this._currentEpisodePos += 1;
+			this.loadCurrentURI();
+			return false;
 		}
 		else {
-			this._currentEpisodePos = 0;
-			this._currentSeasonPos += 1;
-
-			if (this._currentSeasonPos >= this.getCurrentVideo().seasons.length) {
-				this._currentSeasonPos = 0;
-			}
+			return true;
 		}
-		
-		return this.loadCurrentURI();
 	}
 };
 

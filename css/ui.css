@@ -102,12 +102,33 @@
 }
 
 .episode-item img {
+	position: relative;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 	border-radius: 20px;
 }
 
+.episode-item .episode-name {
+	z-index: 1000;
+	opacity: 0;
+}
+
+.episode-item.selected .episode-name {
+
+	opacity: 1;
+}
+
 .episode-item.selected img {
 	transform: scale(1.2);
+}
+
+.season-item {
+	display: inline-block;
+	box-sizing: border-box;
+}
+
+.season-item.selected {
+	border: 1px solid white;
+	border-radius: 20px;
 }
