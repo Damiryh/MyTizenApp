@@ -2,7 +2,6 @@ UI = {
 	focusedElement: window
 };
 
-/* // For remotes
 const KeyCode = {
 	LEFT:  37,
 	UP:    38,
@@ -10,16 +9,6 @@ const KeyCode = {
 	DOWN:  40,
 	OK:    13,
 	BACK:  10009
-};
-*/
-
-const KeyCode = {
-	LEFT:  37,
-	UP:    38,
-	RIGHT: 39,
-	DOWN:  40,
-	OK:    13,
-	BACK:  8
 };
 
 const UIElement = {
@@ -347,7 +336,7 @@ function updateInfobar() {
 
 function AVPlayer() {
 	this.__proto__ = UIElement;
-	
+
 	this.avplay = webapis.avplay;
 	this._root = document.createElement('object');
 	this._root.type = 'application/player';
