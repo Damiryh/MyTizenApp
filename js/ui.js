@@ -334,13 +334,13 @@ function updateInfobar() {
 
 //======================================================================
 
-function AVPlayer() {
+function AVPlayer(avplay) {
 	this.__proto__ = UIElement;
+	this.avplay = avplay;
 
-	this.avplay = webapis.avplay;
 	this._root = document.createElement('object');
-	this._root.type = 'application/player';
-	this._root.id = 'player';
+	this._root.type = 'application/avplayer';
+	this._root.id = 'avplayer';
 	
 	this._playing = false;
 	this._currentTime = 0;
@@ -431,7 +431,7 @@ function AVPlayer() {
 //======================================================================
 
 window.addEventListener('portalLoad', () => {
-	UI.player = new AVPlayer();
+	UI.player = new AVPlayer(webapis.avplay);
 	UI.player.bindElement(document.body);
 	UI.player.open(Collector.currentEpisodeURI);
 	UI.player.play();
